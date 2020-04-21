@@ -45,7 +45,7 @@ def generate_dataset_AR(n, d, rho=0.9):
 
     return dataset
 
-def generate_dataset_blockwise(n, d, rho_w, who_b, predictors_per_block = 10):
+def generate_dataset_blockwise(n, d, rho_w, rho_b, predictors_per_block = 10):
     assert d%predictors_per_block == 0
 
     mean = [0]*d    # [0 for _ in range(d)]
@@ -99,10 +99,84 @@ def realDistances(dataset):
 
     return P
 
+def BIC(dataset, show=False):
+    from sklearn import mixture
+    import itertools
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+    from scipy import linalg
+
+    lowest_bic = np.infty
+    bic = []
+    n_components_range = range(1, 10)
+    cv_types = ['spherical', 'tied', 'diag', 'full']
+    for cv_type in cv_types:
+        for n_components in n_components_range:
+            # Fit a Gaussian mixture with EM
+            gmm = mixture.GaussianMixture(n_components=n_components,
+                                          covariance_type=cv_type)
+            gmm.fit(dataset)
+            bic.append(gmm.bic(dataset))
+            if bic[-1] < lowest_bic:
+                lowest_bic = bic[-1]
+                best_gmm = gmm
+
+    bic = np.array(bic)
+    color_iter = itertools.cycle(['navy', 'turquoise', 'cornflowerblue',
+                                  'darkorange'])
+    clf = best_gmm
+    bars = []
+
+    if show:
+        # Plot the BIC scores
+        plt.figure(figsize=(8, 6))
+        spl = plt.subplot(2, 1, 1)
+        for i, (cv_type, color) in enumerate(zip(cv_types, color_iter)):
+            xpos = np.array(n_components_range) + .2 * (i - 2)
+            bars.append(plt.bar(xpos, bic[i * len(n_components_range):
+                                          (i + 1) * len(n_components_range)],
+                                width=.2, color=color))
+        plt.xticks(n_components_range)
+        plt.ylim([bic.min() * 1.01 - .01 * bic.max(), bic.max()])
+        plt.title('BIC score per model')
+        xpos = np.mod(bic.argmin(), len(n_components_range)) + .65 +\
+            .2 * np.floor(bic.argmin() / len(n_components_range))
+        plt.text(xpos, bic.min() * 0.97 + .03 * bic.max(), '*', fontsize=14)
+        spl.set_xlabel('Number of components')
+        spl.legend([b[0] for b in bars], cv_types)
+
+
+        # Plot the winner
+        splot = plt.subplot(2, 1, 2)
+        Y_ = clf.predict(dataset)
+        for i, (mean, cov, color) in enumerate(zip(clf.means_, clf.covariances_,
+                                                   color_iter)):
+            v, w = linalg.eigh(cov)
+            if not np.any(Y_ == i):
+                continue
+            plt.scatter(dataset[Y_ == i, 0], dataset[Y_ == i, 1], .8, color=color)
+
+            # Plot an ellipse to show the Gaussian component
+            angle = np.arctan2(w[0][1], w[0][0])
+            angle = 180. * angle / np.pi  # convert to degrees
+            v = 2. * np.sqrt(2.) * np.sqrt(v)
+            ell = mpl.patches.Ellipse(mean, v[0], v[1], 180. + angle, color=color)
+            ell.set_clip_box(splot.bbox)
+            ell.set_alpha(.5)
+            splot.add_artist(ell)
+
+        plt.xticks(())
+        plt.yticks(())
+        plt.title('Selected GMM: full model, 2 components')
+        plt.subplots_adjust(hspace=.35, bottom=.02)
+        plt.show()
+
+    return clf.n_components
+
 # *************************************** MISSINGNESS **********************************************
 # https://rmisstastic.netlify.com/how-to/python/generate_html/how%20to%20generate%20missing%20values
 # Amputation
-def generate_missingness(dataset, missingness_percentage):
+def generate_missingness_flatten(dataset, missingness_percentage):
     n, d = dataset.shape
     dataset_real = copy.copy(dataset)
     dataset = dataset.flatten()
@@ -126,15 +200,51 @@ def generate_missingness(dataset, missingness_percentage):
 
     return dataset_real, np.array(dataset)
 
-# MCAR
-def generate_MCAR(dataset, missingness_percentage):
-    # Mask completly at random some values
+def generate_missingness_instances(dataset, mis):
+    dataset_copy = copy.deepcopy(dataset)
+    indexes = random.sample(range(dataset.shape[0]), math.floor(mis * dataset.shape[0]))
 
+    for i in indexes:
+        num = random.sample(range(math.ceil(dataset.shape[1]/3) + 1), 1)[0]
+        for j in random.sample(range(dataset.shape[1]), num):
+            dataset[i][j] = np.nan
+
+    return dataset_copy, dataset
+
+def generate_missingness_p(dataset, mis):
+    n, d = dataset.shape
+    dataset_real = copy.deepcopy(dataset)
+
+    for i in range(n):
+        for j in range(d):
+            if random.random() < mis:
+                dataset[i][j] = float("nan")
+    dataset = dataset.flatten()
+    dataset = np.array(dataset)
+    dataset = np.split(dataset, n)
+
+    # Delete items with all NaN
+    indices = np.array(np.where(np.all(np.isnan(np.array(dataset)), axis=1)))[0]
+
+    indices.sort()
+    indices = np.flip(indices)
+
+    for i in indices:
+        dataset.pop(i)
+        dataset_real = np.delete(dataset_real, i, axis=0)
+
+    return dataset_real, np.array(dataset)
+
+# MCAR
+def generate_missingness_MCAR(dataset, missingness_percentage, verbose=False):
+    # Mask completly at random some values
     M = np.random.binomial(1, missingness_percentage, size = dataset.shape)
     X_obs = dataset.copy()
     np.putmask(X_obs, M, np.nan)
-    print('Percentage of newly generated mising values (MCAR): {}'.\
-      format(np.round(np.sum(np.isnan(X_obs))/X_obs.size,3)))
+
+    if verbose:
+        print('Percentage of newly generated mising values (MCAR): {}'.\
+          format(np.round(np.sum(np.isnan(X_obs))/X_obs.size,3)))
 
     # # warning if a full row is missing
     # for row in X_obs:
@@ -159,7 +269,7 @@ def generate_MCAR(dataset, missingness_percentage):
     return dataset, X_obs
 
 # MAR
-def generate_MAR(dataset, missingness_percentage, W=None):
+def generate_missingness_MAR(dataset, missingness_percentage, W=None, verbose=False):
     """ Observed values will censor the missing ones
 
     The proba of being missing: M_proba = X_obs.dot(W)
@@ -201,8 +311,10 @@ def generate_MAR(dataset, missingness_percentage, W=None):
     M = M_proba > thresold
 
     np.putmask(X_obs, M, np.nan)
-    print('Percentage of newly generated mising values (MAR): {}'.\
-      format(np.sum(np.isnan(X_obs))/X_obs.size))
+
+    if verbose:
+        print('Percentage of newly generated mising values (MAR): {}'.\
+          format(np.sum(np.isnan(X_obs))/X_obs.size))
 
     # Delete items with all NaN
     indices = np.array(np.where(np.all(np.isnan(np.array(X_obs)), axis=1)))[0]
@@ -215,7 +327,7 @@ def generate_MAR(dataset, missingness_percentage, W=None):
     return dataset, X_obs
 
 # NMAR
-def generate_NMAR(dataset, missingness_percentage):
+def generate_missingness_NMAR(dataset, missingness_percentage, verbose=False):
     """" ampute X_complete with censoring (Missing Not At Random)
 
     The missingness depends on the values.
@@ -233,8 +345,10 @@ def generate_NMAR(dataset, missingness_percentage):
 
     X_obs = dataset.copy()
     np.putmask(X_obs, M, np.nan)
-    print('Percentage of newly generated mising values (NMAR): {}'.\
-      format(np.sum(np.isnan(X_obs))/X_obs.size))
+
+    if verbose:
+        print('Percentage of newly generated mising values (NMAR): {}'.\
+          format(np.sum(np.isnan(X_obs))/X_obs.size))
 
     # Delete items with all NaN
     indices = np.array(np.where(np.all(np.isnan(np.array(X_obs)), axis=1)))[0]

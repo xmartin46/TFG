@@ -46,6 +46,7 @@ if opt == '1':
     dataset = np.array(dataset)
 
 # Missigness in the whole dataset
+# Check that any instance has all values equal to NaN
 elif opt == '2':
     dataset = dataset.flatten()
 

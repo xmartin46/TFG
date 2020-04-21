@@ -31,7 +31,7 @@ cov = np.array(cov)
 # print(cov)
 
 if is_pos_def(cov):
-    dataset = np.random.multivariate_normal(mean, cov, n).T
+    dataset = np.random.multivariate_normal(mean, cov, n)
     # print(np.cov(dataset))
 else:
     print("Error")

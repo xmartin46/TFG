@@ -6,9 +6,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from .utils import impute_methods
-
 # ******************************** CLASSES ***********************************
+class impute_methods:
+    def __init__(self):
+        pass
+
+    def MSIE(self, real, imputed):
+        return np.sum(abs(real - imputed) ** 2)/np.count_nonzero(real - imputed)
+
+    def MAIE(self, real, imputed):
+        return np.sum(abs(real - imputed))/np.count_nonzero(real - imputed)
+
 class kNN(impute_methods):
     def __init__(self):
         self.dataset = None
@@ -258,3 +266,196 @@ class wNN_correlation(impute_methods):
 
     def MAIE(self, real, dataset):
         return super().MAIE(real, dataset)
+
+# ********************************************************************************
+
+# *************************** FUNCTIONS *****************************
+def is_pos_def(A):
+    if np.array_equal(A, A.T):
+        try:
+            np.linalg.cholesky(A)
+            return True
+        except np.linalg.LinAlgError:
+            return False
+    else:
+        return False
+
+def generate_dataset_AR(n, d, rho=0.9):
+    mean = [0]*d
+    cov = []
+
+    for i in range(d):
+        A = []
+        for j in range(d):
+            A.append(rho**(abs(i - j)))
+        cov.append(A)
+    cov = np.array(cov)
+
+    if is_pos_def(cov):
+        dataset = np.random.multivariate_normal(mean, cov, n)
+    else:
+        print("Error")
+
+    return dataset
+
+def generate_dataset_blockwise(n, d, rho_w, who_b, predictors_per_block = 10):
+    assert d%predictors_per_block == 0
+
+    mean = [0]*d    # [0 for _ in range(d)]
+    cov = []
+
+    for i in range(d):
+        A = []
+        for j in range(int(d/predictors_per_block)):
+            if math.floor(i/predictors_per_block) == j:
+                A.append([rho_w] * predictors_per_block)
+            else:
+                A.append([rho_b] * predictors_per_block)
+        A = np.array(A)
+        cov.append(A.flatten())
+
+    cov = np.array(cov)
+    dataset = np.random.multivariate_normal(mean, cov, n)
+
+    return dataset
+
+def generate_missingness(dataset, missingness_percentage):
+    n, d = dataset.shape
+
+    dataset = dataset.flatten()
+
+    L = random.sample(range(n * d), math.floor(d * n * missingness_percentage))
+    for j in range(len(L)):
+        dataset[L[j]] = float('nan')
+
+    dataset = np.array(dataset)
+    dataset = np.split(dataset, n)
+    dataset = np.array(dataset)
+
+    return dataset
+
+def verify_dataset(dataset):
+    n, d = dataset.shape
+
+    for i in range(n):
+        elem = dataset[i]
+        found = False
+        for j in range(d):
+            if not math.isnan(elem[j]):
+                found = True
+        if not found:
+            print("UN SENSE CAP ELEMENT")
+            print(elem)
+            while 1:
+                a = 0
+# *******************************************************************
+
+# *************************** VARIABLES *****************************
+# REPETITIONS
+samples = 1
+
+# GENERATE DATASETS
+n = 100
+d = 15
+#   AR
+rho = 0.9
+#   BW
+rho_w = 0.9
+rho_b = 0.1
+predictors_per_block = 5
+
+# MISSINGNESS
+missingness_percentage = 0.05
+
+# NEAREST NEIGHBOR
+neighbors = 10
+q = 2
+lambd = 1
+mC = 6
+kernels = ['Gaussian',
+           'Tricube']
+kernel_type = kernels[0]
+# ******************************************************************
+
+MSIE_AR_kNN = 0
+MAIE_AR_kNN = 0
+
+MSIE_BW_kNN = 0
+MAIE_BW_kNN = 0
+
+
+MSIE_AR_wNN = 0
+MAIE_AR_wNN = 0
+
+MSIE_BW_wNN = 0
+MAIE_BW_wNN = 0
+
+
+MSIE_AR_wNNC = 0
+MAIE_AR_wNNC = 0
+
+MSIE_BW_wNNC = 0
+MAIE_BW_wNNC = 0
+
+
+kNN = kNN()
+wNN = wNN()
+wNNC = wNN_correlation()
+
+for _ in tqdm(range(samples)):
+    datasetAR = generate_dataset_AR(n, d, rho)
+    datasetBW = generate_dataset_blockwise(n, d, rho_w, rho_b, predictors_per_block)
+
+    datasetAR_missing = generate_missingness(datasetAR, missingness_percentage)
+    datasetBW_missing = generate_missingness(datasetBW, missingness_percentage)
+
+    verify_dataset(datasetAR_missing)
+    verify_dataset(datasetBW_missing)
+
+
+
+    imputed_kNN_AR = kNN.impute(datasetAR_missing, neighbors, q)
+    imputed_kNN_BW = kNN.impute(datasetBW_missing, neighbors, q)
+
+    imputed_wNN_AR = wNN.impute(datasetAR_missing, neighbors, q, kernel_type, lambd)
+    imputed_wNN_BW = wNN.impute(datasetBW_missing, neighbors, q, kernel_type, lambd)
+
+    imputed_wNNC_AR = wNNC.impute(datasetAR, datasetAR_missing, neighbors, q, kernel_type, lambd)
+    imputed_wNNC_BW = wNNC.impute(datasetBW, datasetBW_missing, neighbors, q, kernel_type, lambd)
+
+
+
+    MSIE_AR_kNN += kNN.MSIE(datasetAR, imputed_kNN_AR)
+    MAIE_AR_kNN += kNN.MAIE(datasetAR, imputed_kNN_AR)
+
+    MSIE_BW_kNN += kNN.MSIE(datasetBW, imputed_kNN_BW)
+    MAIE_BW_kNN += kNN.MAIE(datasetBW, imputed_kNN_BW)
+
+
+    MSIE_AR_wNN += wNN.MSIE(datasetAR, imputed_wNN_AR)
+    MAIE_AR_wNN += wNN.MAIE(datasetAR, imputed_wNN_AR)
+
+    MSIE_BW_wNN += wNN.MSIE(datasetBW, imputed_wNN_BW)
+    MAIE_BW_wNN += wNN.MAIE(datasetBW, imputed_wNN_BW)
+
+
+    MSIE_AR_wNNC += wNNC.MSIE(datasetAR, imputed_wNNC_AR)
+    MAIE_AR_wNNC += wNNC.MAIE(datasetAR, imputed_wNNC_AR)
+
+    MSIE_BW_wNNC += wNNC.MSIE(datasetBW, imputed_wNNC_BW)
+    MAIE_BW_wNNC += wNNC.MAIE(datasetBW, imputed_wNNC_BW)
+
+
+
+print("******************************** AR ********************************")
+print("                     kNN                 wNN                    wNNCorrelation")
+print(f" MSIE    {MSIE_AR_kNN/samples}      {MSIE_AR_wNN/samples}       {MSIE_AR_wNNC/samples}")
+print(f" MAIE    {MAIE_AR_kNN/samples}      {MAIE_AR_wNN/samples}       {MAIE_AR_wNNC/samples}")
+
+print()
+print()
+
+print("******************************** BW ********************************")
+print("                 kNN                     wNN                    wNNCorrelation")
+print(f" MSIE    {MSIE_BW_kNN/samples}      {MSIE_BW_wNN/samples}       {MSIE_BW_wNNC/samples}")
+print(f" MAIE    {MAIE_BW_kNN/samples}      {MAIE_BW_wNN/samples}       {MAIE_BW_wNNC/samples}")

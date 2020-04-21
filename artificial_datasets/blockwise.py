@@ -29,5 +29,5 @@ cov = np.array(cov)
 # print()
 # print()
 
-dataset = np.random.multivariate_normal(mean, cov, n).T
+dataset = np.random.multivariate_normal(mean, cov, n)
 # print(np.around(np.cov(dataset), 1))

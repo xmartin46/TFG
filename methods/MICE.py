@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, LogisticRegression, Ridge, RidgeClassifier
 
-from utils import impute_methods
+from .utils import impute_methods
 
 class MICE(impute_methods):
     def __init__(self):

@@ -35,7 +35,7 @@ elif opt == '2':
     mean = random_list(d, secure=True)    # [0 for _ in range(d)]
     cov = np.random.rand(d, d)
 
-    dataset = np.random.multivariate_normal(mean, cov, n).T
+    dataset = np.random.multivariate_normal(mean, cov, n)
 
 print(dataset)
 print()
