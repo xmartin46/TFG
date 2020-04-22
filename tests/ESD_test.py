@@ -12,7 +12,7 @@ from methods.utils import *
 from sklearn.metrics import mean_squared_error
 
 # ************************ VARIABLES *******************************
-missingness_percentage = [0.05, 0.15, 0.3, 0.6]
+missingness_percentage = [0.1, 0.3, 0.5]
 iterations = 10
 
 model = ESD()
@@ -30,24 +30,8 @@ for mis in missingness_percentage:
         cov = np.array([[0.4, 0.15, 0.25], [0.15, 0.25, 0.1], [0.25, 0.1, 0.3]])
         dataset = np.random.multivariate_normal(mean, cov, n)
 
-        from sklearn import datasets
-        iris = datasets.load_iris()
-        dataset = iris.data
-
-        # from auto_mpg import mpg
-        # dataset = mpg
-
-        from ecoli import ecoli
-        dataset = ecoli
-
-        # from glass import glass
-        # dataset = glass
-
-        # from wine import wine
-        # dataset = wine
-
-        # dataset = (dataset - np.mean(dataset)) / np.std(dataset)
-        dataset, dataset_missing = generate_missingness_flatten(dataset, mis)
+        dataset = (dataset - np.mean(dataset)) / np.std(dataset)
+        dataset, dataset_missing = generate_missingness_instances(dataset, mis)
 
         n, d = dataset_missing.shape
 

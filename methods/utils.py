@@ -17,6 +17,20 @@ class impute_methods:
         return np.sum(abs(real - imputed))/np.count_nonzero(real - imputed)
 
 # *************************** FUNCTIONS *****************************
+def parse_file(file_name):
+    data = []
+
+    directory_path = '../data/'
+    file_path = directory_path + file_name
+    with open(file_path, 'r') as fp:
+        for line in fp:
+            if ',' in line:
+                line = line.replace(',', ' ')
+            data.append(list(map(float, line.split())))
+
+    data = np.array(data)
+    return data
+
 def is_pos_def(A):
     if np.array_equal(A, A.T):
         try:
