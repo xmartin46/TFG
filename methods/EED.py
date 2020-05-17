@@ -50,15 +50,15 @@ class EED:
             mu_o = mu_cluster[Oi]
             cov_mo = cov_cluster[Mi, :][:, Oi]
             cov_oo = cov_cluster[Oi, :][:, Oi]
-            cov_oo_inverse = np.linalg.pinv(cov_oo)
+            cov_oo_inverse = np.linalg.inv(cov_oo + 1e-6 * np.identity(cov_oo.shape[0]))
 
             aux = np.dot(cov_mo, np.dot(cov_oo_inverse, (Xi[Oi] - mu_o)[:,np.newaxis]))
             nan_count = np.sum(Mi)
             mus_i[cluster] = mu_m + aux.reshape(1, nan_count)
 
             # cov_i
-            aux = np.linalg.pinv(cov_cluster)
-            covs_i[cluster] = np.linalg.pinv(aux[Mi, :][:, Mi])
+            aux = np.linalg.inv(cov_cluster + 1e-6 * np.identity(cov_cluster.shape[0]))
+            covs_i[cluster] = np.linalg.inv(aux[Mi, :][:, Mi] + 1e-6 * np.identity(aux[Mi, :][:, Mi].shape[0]))
 
 
             # mu_j
@@ -66,15 +66,15 @@ class EED:
             mu_o = mu_cluster[Oj]
             cov_mo = cov_cluster[Mj, :][:, Oj]
             cov_oo = cov_cluster[Oj, :][:, Oj]
-            cov_oo_inverse = np.linalg.pinv(cov_oo)
+            cov_oo_inverse = np.linalg.inv(cov_oo + 1e-6 * np.identity(cov_oo.shape[0]))
 
             aux = np.dot(cov_mo, np.dot(cov_oo_inverse, (Xj[Oj] - mu_o)[:,np.newaxis]))
             nan_count = np.sum(Mj)
             mus_j[cluster] = mu_m + aux.reshape(1, nan_count)
 
             # cov_j
-            aux = np.linalg.pinv(cov_cluster)
-            covs_j[cluster] = np.linalg.pinv(aux[Mj, :][:, Mj])
+            aux = np.linalg.inv(cov_cluster + 1e-6 * np.identity(cov_cluster.shape[0]))
+            covs_j[cluster] = np.linalg.inv(aux[Mj, :][:, Mj] + 1e-6 * np.identity(aux[Mj, :][:, Mj].shape[0]))
 
         # Compute padded conditional mean vectors and conditional covariance
         # matrices of Xi - Xj for ecah GMM component
@@ -119,12 +119,12 @@ class EED:
 
         return eta_estimation
 
-    def estimateDistances(self, dataset_missing):
+    def estimateDistances(self, dataset_missing, n_gaussians):
         modelEM = EM()
-        priors, mus, covs, imputed_dataset = modelEM.impute(dataset_missing, 1, n_iters=30, epsilon=1e-4)
+        priors, mus, covs, imputed_dataset = modelEM.impute(dataset_missing, n_gaussians)
 
         modelESD = ESD()
-        EzALL = modelESD.estimateDistances(dataset_missing, 1)
+        EzALL = modelESD.estimateDistances(dataset_missing, n_gaussians)
 
         P = np.zeros((modelEM.n, modelEM.n), dtype=float)
 

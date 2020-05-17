@@ -103,16 +103,16 @@ class MiceImputer(object):
         return new_X
 ##########################################
 
-iterations = 50
+iterations = 500
 
 for mis in missingness_percentage:
     print("MICE MISSINGNESS PERCENTAGE => ", mis)
     RMSE = 0
 
     for it in range(iterations):
-        dataset = parse_file('haberman.csv')
+        dataset = parse_file('mpg.csv')
 
-        dataset = (dataset - np.mean(dataset)) / np.std(dataset)
+        # dataset = (dataset - np.mean(dataset)) / np.std(dataset)
         dataset, dataset_missing = generate_missingness_instances(dataset, mis)
 
         # import pandas as pd

@@ -4,6 +4,7 @@ import random
 import warnings
 import numpy as np
 from numpy.random import normal
+from sklearn.model_selection import KFold
 from sklearn.preprocessing import normalize
 
 class impute_methods:
@@ -161,23 +162,24 @@ def BIC(dataset, show=False):
 
 
         # Plot the winner
-        splot = plt.subplot(2, 1, 2)
-        Y_ = clf.predict(dataset)
-        for i, (mean, cov, color) in enumerate(zip(clf.means_, clf.covariances_,
-                                                   color_iter)):
-            v, w = linalg.eigh(cov)
-            if not np.any(Y_ == i):
-                continue
-            plt.scatter(dataset[Y_ == i, 0], dataset[Y_ == i, 1], .8, color=color)
-
-            # Plot an ellipse to show the Gaussian component
-            angle = np.arctan2(w[0][1], w[0][0])
-            angle = 180. * angle / np.pi  # convert to degrees
-            v = 2. * np.sqrt(2.) * np.sqrt(v)
-            ell = mpl.patches.Ellipse(mean, v[0], v[1], 180. + angle, color=color)
-            ell.set_clip_box(splot.bbox)
-            ell.set_alpha(.5)
-            splot.add_artist(ell)
+        # splot = plt.subplot(2, 1, 2)
+        # Y_ = clf.predict(dataset)
+        # for i, (mean, cov, color) in enumerate(zip(clf.means_, clf.covariances_,
+        #                                            color_iter)):
+        #     print(cov)
+        #     v, w = linalg.eigh(cov)
+        #     if not np.any(Y_ == i):
+        #         continue
+        #     plt.scatter(dataset[Y_ == i, 0], dataset[Y_ == i, 1], .8, color=color)
+        #
+        #     # Plot an ellipse to show the Gaussian component
+        #     angle = np.arctan2(w[0][1], w[0][0])
+        #     angle = 180. * angle / np.pi  # convert to degrees
+        #     v = 2. * np.sqrt(2.) * np.sqrt(v)
+        #     ell = mpl.patches.Ellipse(mean, v[0], v[1], 180. + angle, color=color)
+        #     ell.set_clip_box(splot.bbox)
+        #     ell.set_alpha(.5)
+        #     splot.add_artist(ell)
 
         plt.xticks(())
         plt.yticks(())

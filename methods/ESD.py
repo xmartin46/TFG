@@ -28,7 +28,7 @@ class ESD:
 
         # Estimate the mean and covariance of the data set with the ECM algorithm (tornar a mirar)
         model = EM()
-        priors, mus, covs, imputed_dataset = model.impute(dataset, n_gaussians, n_iters=30, epsilon=1e-4)
+        priors, mus, covs, imputed_dataset = model.impute(dataset, n_gaussians)
 
         nan_indices = np.where(np.any(np.isnan(dataset), axis=1))[0]
         variances = np.zeros((model.n), dtype=float)
@@ -42,14 +42,16 @@ class ESD:
                 # mu_o = model.mus[cluster][~nan_Xm]
                 # cov_mo = model.covs[cluster][nan_Xm, :][:, ~nan_Xm]
                 # cov_oo = model.covs[cluster][~nan_Xm, :][:, ~nan_Xm]
-                # cov_oo_inverse = np.linalg.pinv(cov_oo)
+                # cov_oo_inverse = np.linalg.inv(cov_oo)
                 # aux = np.dot(cov_mo, np.dot(cov_oo_inverse, (dataset[indx][~nan_Xm] - mu_o)[:,np.newaxis]))
                 # nan_count = np.sum(nan_Xm)
                 # dataset[indx, nan_Xm] = mu_m + aux.reshape(1, nan_count)
 
+                aux = np.linalg.inv(model.covs[cluster] + 1e-6 * np.identity(model.covs[cluster].shape[0]))
+                cov_11 = np.linalg.inv(aux[nan_Xm, :][:, nan_Xm] + 1e-6 * np.identity(aux[nan_Xm, :][:, nan_Xm].shape[0]))
 
-                aux = np.linalg.pinv(model.covs[cluster])
-                cov_11 = np.linalg.pinv(aux[nan_Xm, :][:, nan_Xm])
+                # aux = np.linalg.inv(model.covs[cluster])
+                # cov_11 = np.linalg.inv(aux[nan_Xm, :][:, nan_Xm])
 
                 variances[indx] += model.priors[cluster] * np.trace(cov_11)
 

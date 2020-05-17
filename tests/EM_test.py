@@ -16,7 +16,7 @@ samples = 1
 
 # GENERATE DATASETS
 n = 100
-d = 15
+d = 10
 #   AR
 rho = 0.9
 #   BW
@@ -38,10 +38,17 @@ for _ in tqdm(range(samples)):
     datasetAR, datasetAR_missing = generate_missingness_flatten(datasetAR, missingness_percentage)
     datasetBW, datasetBW_missing = generate_missingness_flatten(datasetBW, missingness_percentage)
 
-    priors, mus, covs, imputed_dataset = model.impute(datasetAR_missing, 1)
+    _, _, _, imputed_dataset = model.impute(copy.deepcopy(datasetAR_missing), 1)
 
     print("MSIE AR => ", model.MSIE(datasetAR, imputed_dataset))
     print("MAIE AR => ", model.MAIE(datasetAR, imputed_dataset))
+
+    # total_missing_values = np.count_nonzero(abs(datasetAR - imputed_dataset))
+    # print(math.sqrt(np.sum(abs(datasetAR - imputed_dataset) ** 2)/total_missing_values))
+    #
+    # imputed_dataset = impute_em(datasetAR_missing)
+    # total_missing_values = np.count_nonzero(abs(datasetAR - imputed_dataset['X_imputed']))
+    # print(math.sqrt(np.sum(abs(datasetAR - imputed_dataset['X_imputed']) ** 2)/total_missing_values))
 
 
     priors, mus, covs, imputed_dataset = model.impute(datasetBW_missing, 1)

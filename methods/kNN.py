@@ -68,7 +68,7 @@ class kNN(impute_methods):
                 if m != 0:
                     elem[miss_index] = sum/m
                 else:
-                    elem[miss_index] = float('nan')
+                    elem[miss_index] = 0
 
             M.append(elem)
 
@@ -152,7 +152,7 @@ class wNN(impute_methods):
                 if sum != 0:
                     elem[miss_index] = sum
                 else:
-                    elem[miss_index] = float('nan')
+                    elem[miss_index] = 0
 
             M.append(elem)
 
@@ -247,7 +247,7 @@ class wNN_correlation(impute_methods):
                 if sum != 0:
                     elem[miss_index] = sum
                 else:
-                    elem[miss_index] = float('nan')
+                    elem[miss_index] = 0
 
             M.append(elem)
 

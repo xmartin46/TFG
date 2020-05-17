@@ -14,9 +14,9 @@ from sklearn.metrics import mean_squared_error
 # ************************ VARIABLES *******************************
 real_and_not_real = 0
 real_and_imputed = 0
-missingness_percentage = [0.1, 0.3, 0.5]
+missingness_percentage = [0.05, 0.15, 0.3, 0.6]
 
-iterations = 10
+iterations = 5
 
 for mis in missingness_percentage:
     print("EED MISSINGNESS PERCENTAGE => ", mis)
@@ -33,16 +33,15 @@ for mis in missingness_percentage:
         iris = datasets.load_iris()
         dataset = iris.data
 
-        from mpg import mpg
-        dataset = mpg
+        # dataset = parse_file("mpg.csv")
 
-        dataset = (dataset - np.mean(dataset)) / np.std(dataset)
+        # dataset = (dataset - np.mean(dataset)) / np.std(dataset)
         dataset, dataset_missing = generate_missingness_flatten(dataset, mis)
 
         n, d = dataset_missing.shape
 
         model = EED()
-        P = model.estimateDistances(copy.deepcopy(dataset_missing))
+        P = model.estimateDistances(copy.deepcopy(dataset_missing), 1)
         R = realDistances(dataset)
 
         s = 0
@@ -60,10 +59,10 @@ for mis in missingness_percentage:
         RMSE += math.sqrt(s/(count * n - count * (count + 1)/2))
         print(f"RMSE => {RMSE/(it + 1)} ({math.sqrt(s/(count * n - count * (count + 1)/2))})")
 
-        mine += math.sqrt(mean_squared_error(real, not_real))
-        print(f"mine => {mine/(it + 1)} ({math.sqrt(mean_squared_error(real, not_real))})")
+        # mine += math.sqrt(mean_squared_error(real, not_real))
+        # print(f"mine => {mine/(it + 1)} ({math.sqrt(mean_squared_error(real, not_real))})")
 
     print()
     print(f"RMSE => {RMSE/iterations}")
-    print(f"mine => {mine/iterations}")
+    # print(f"mine => {mine/iterations}")
     print()

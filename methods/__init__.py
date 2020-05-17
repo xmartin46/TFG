@@ -4,3 +4,6 @@ from .utils import *
 from .EED import *
 from .kNN import *
 from .MICE import *
+from .DNI import *
+from .IZero import *
+from .IMean import *
