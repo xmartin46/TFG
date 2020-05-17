@@ -1,5 +1,6 @@
 from .ESD import *
 from .EM import *
+from .EMparallel import *
 from .utils import *
 from .EED import *
 from .kNN import *

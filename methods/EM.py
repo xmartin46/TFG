@@ -285,7 +285,6 @@ class EM(impute_methods):
                 probabilities[cluster][i] = multivariate_normal.pdf(dataset[i][~nan_indexes], mean=mu_o, cov=cov_oo, allow_singular=True) # * priors[cluster]
 
         aux = probabilities.sum(axis=0)
-
         return probabilities/(aux + 1e-308)
 
     def __m_step(self, dataset, probabilities, priors, mus, covs, n_gaussians):
@@ -403,7 +402,7 @@ class EM(impute_methods):
 
         return np.array([1]), np.array([Mu]), np.array([S]), X_tilde
 
-    def impute(self, dataset, n_gaussians, n_iters=100, epsilon=1e-20, init='kmeans', verbose=False):
+    def impute(self, dataset, n_gaussians, n_iters=10, epsilon=1e-20, init='kmeans', verbose=False):
         self.n, self.d = dataset.shape
         self.n_gaussians = n_gaussians
 
@@ -438,8 +437,11 @@ class EM(impute_methods):
         for it in range(n_iters):
             mu_old = mus.copy()
 
+            start = time.time()
             probabilities = self.__e_step(dataset, priors, mus, covs, n_gaussians)
+
             priors, mus, covs, imputed_dataset = self.__m_step(dataset, probabilities, priors, mus, covs, n_gaussians)
+            print(time.time() - start)
 
             # convergence
             temp = 0
@@ -455,6 +457,50 @@ class EM(impute_methods):
         self.priors = priors
         self.mus = mus
         self.covs = covs
+
+
+
+
+
+        elem_belong_to_cluster = np.argmax(probabilities, axis=0)
+        imputed_dataset = copy.deepcopy(dataset)
+
+        for cluster in range(n_gaussians):
+            # Expect missing values
+            data_aux = copy.deepcopy(dataset)
+            for i in range(self.n):
+                if np.sum(np.isnan(dataset[i])) != 0:
+                    mu_cluster = mus[cluster]
+                    cov_cluster = covs[cluster]
+
+                    nan_indexes = np.isnan(dataset[i])
+                    mu_m = mu_cluster[nan_indexes]
+                    mu_o = mu_cluster[~nan_indexes]
+                    cov_mo = cov_cluster[nan_indexes, :][:, ~nan_indexes]
+                    cov_oo = cov_cluster[~nan_indexes, :][:, ~nan_indexes]
+                    cov_oo_inverse = np.linalg.inv(cov_oo + 1e-6 * np.identity(cov_oo.shape[0]))
+
+                    aux = np.dot(cov_mo,
+                                    np.dot(cov_oo_inverse, (dataset[i, ~nan_indexes] - mu_o)[:,np.newaxis]))
+                    nan_count = np.sum(nan_indexes)
+                    data_aux[i, nan_indexes] = mu_m + aux.reshape(1, nan_count)
+
+                    if cluster == elem_belong_to_cluster[i]:
+                        imputed_dataset[i] = data_aux[i]
+                else:
+                    imputed_dataset[i] = dataset[i]
+
+
+
+
+
+
+
+
+
+
+
+
 
         return priors, mus, covs, imputed_dataset
 
