@@ -327,7 +327,7 @@ class EM(impute_methods):
 
         return priors, mus, covs, imputed_dataset
 
-    def __impute_em(self, X, max_iter = 100, eps = 1e-8):
+    def __impute_em(self, X, max_iter = 50, eps = 1e-8):
         '''(np.array, int, number) -> {str: np.array or int}
 
         Precondition: max_iter >= 1 and eps > 0
@@ -403,7 +403,7 @@ class EM(impute_methods):
 
         return np.array([1]), np.array([Mu]), np.array([S]), X_tilde
 
-    def impute(self, dataset, n_gaussians, n_iters=100, epsilon=1e-20, init='kmeans', verbose=False):
+    def impute(self, dataset, n_gaussians, n_iters=50, epsilon=1e-8, init='kmeans', verbose=False):
         self.n, self.d = dataset.shape
         self.n_gaussians = n_gaussians
 
@@ -414,25 +414,26 @@ class EM(impute_methods):
         mus = np.zeros((n_gaussians, self.d), dtype=float)
         covs = np.zeros((n_gaussians, self.d, self.d), dtype=float)
 
-        # cop = copy.deepcopy(dataset)
-        # cop = np.where(np.isnan(cop), np.ma.array(cop, mask=np.isnan(cop)).mean(axis=0), cop)
-        #
-        # indices = np.array(np.where(np.all(~np.isnan(np.array(cop)), axis=1)))[0]
-        # if init == 'kmeans' and len(indices) > 0:
-        #     data_for_kmeans = cop[indices]
-        #     kmeans = KMeans(n_clusters=n_gaussians, init='k-means++').fit(data_for_kmeans)
-        #     mus = kmeans.cluster_centers_
-        # elif len(indices) > 0:
-        #     for cluster in range(n_gaussians):
-        #         mus[cluster] = dataset[indices[cluster]]
-        # else:
-        aux = np.nanmean(dataset, axis=0)
-        for cluster in range(n_gaussians):
-            mus[cluster] = aux
+        cop = copy.deepcopy(dataset)
+        cop = np.where(np.isnan(cop), np.ma.array(cop, mask=np.isnan(cop)).mean(axis=0), cop)
+
+        indices = np.array(np.where(np.all(~np.isnan(np.array(cop)), axis=1)))[0]
+        if init == 'kmeans' and len(indices) > 0:
+            data_for_kmeans = cop[indices]
+            kmeans = KMeans(n_clusters=n_gaussians, init='random').fit(data_for_kmeans)
+            mus = kmeans.cluster_centers_
+        elif len(indices) > 0:
+            for cluster in range(n_gaussians):
+                mus[cluster] = dataset[indices[cluster]]
+        else:
+            aux = np.nanmean(dataset, axis=0)
+            for cluster in range(n_gaussians):
+                mus[cluster] = aux
 
         for cluster in range(n_gaussians):
             # covs[cluster] = 1e-6 * np.identity(self.d)
-            covs[cluster] = np.diag(np.nanvar(dataset, axis=0))
+            # covs[cluster] = np.diag(np.nanvar(dataset, axis=0))
+            covs[cluster] = np.cov(mus[cluster])
 
 
         for it in range(n_iters):

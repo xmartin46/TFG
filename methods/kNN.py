@@ -172,7 +172,7 @@ class wNN_correlation(impute_methods):
         self.d = None
         self.cov = None
 
-    def __C(self, r, m=5, c=0.5, type='Power'):
+    def __C(self, r, m, c=0.5, type='Power'):
         if type == 'Power':
             return abs(r) ** m
         else:
@@ -181,13 +181,13 @@ class wNN_correlation(impute_methods):
             else:
                 return 0
 
-    def __distance(self, i, j, index, q=2):
+    def __distance(self, i, j, index, q, mC):
         sum = 0
         m = 0
 
         for l in range(self.d):
             if self.O[i][l] == 1 and self.O[j][l] == 1:
-                sum += (abs(self.dataset[i][l] - self.dataset[j][l]) ** q) * self.__C(self.cov[l][index])
+                sum += (abs(self.dataset[i][l] - self.dataset[j][l]) ** q) * self.__C(self.cov[l][index], mC)
                 m += 1
 
         if m == 0:
@@ -206,7 +206,7 @@ class wNN_correlation(impute_methods):
         else:
             print("Any kernel selected")
 
-    def impute(self, real_dataset, dataset, k=5, q=2, kernel_type='Gaussian', lambd=5):
+    def impute(self, real_dataset, dataset, k=5, q=2, kernel_type='Gaussian', lambd=5, mC=5):
         self.dataset = dataset
         self.n, self.d = dataset.shape
         self.cov = np.cov(real_dataset.T)
@@ -229,7 +229,7 @@ class wNN_correlation(impute_methods):
                 for j in range(self.n):
                     if j != i and not math.isnan(dataset[j][miss_index]):
                         # compute distance
-                        dist = self.__distance(i, j, miss_index, q)
+                        dist = self.__distance(i, j, miss_index, q, mC)
                         if dist != float("inf"):
                             distances.append(tuple((dist, j)))
                 distances.sort()

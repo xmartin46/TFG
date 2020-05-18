@@ -23,7 +23,6 @@ iterations = 1
 dataset_name = 'wine.csv'
 missingness_percentages = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 dataset_attributes = [[100, 30, 0.9]] #[n, d, rho]
-method = MICE()
 
 for n, d, rho in dataset_attributes:
     ALL_ERRORS = []
@@ -54,7 +53,6 @@ for n, d, rho in dataset_attributes:
             methodEM = EM()
             bic = BIC(dataset)
             print(bic)
-            bic = 1
             _, _, _, imputedEM = methodEM.impute(copy.deepcopy(dataset_missing), bic, verbose=True)
             total_missing_values = np.count_nonzero(abs(dataset - imputedEM))
             errorEM = math.sqrt(np.sum(abs(dataset - imputedEM) ** 2)/total_missing_values)
@@ -128,12 +126,14 @@ for n, d, rho in dataset_attributes:
 
             s = 0
             nan_indices = np.where(np.any(np.isnan(dataset_missing), axis=1))[0]
-            for i in range(n):
-                for j in range(n):
+            for i in range(dataset.shape[0]):
+                for j in range(dataset.shape[0]):
                     if i > j:
+                        if P[i][j] < 0:
+                            print(P[i][j])
                         s += (math.sqrt(P[i][j]) - math.sqrt(R[i][j])) ** 2
             count = len(nan_indices)
-            errorESD = math.sqrt(s/(count * n - count * (count + 1)/2))
+            errorESD = math.sqrt(s/(count * dataset.shape[0] - count * (count + 1)/2))
             errorsESD.append(errorESD)
             print("ESD FINISHED")
 
@@ -144,12 +144,12 @@ for n, d, rho in dataset_attributes:
 
             s = 0
             nan_indices = np.where(np.any(np.isnan(dataset_missing), axis=1))[0]
-            for i in range(n):
-                for j in range(n):
+            for i in range(dataset.shape[0]):
+                for j in range(dataset.shape[0]):
                     if i > j:
                         s += (P[i][j] - math.sqrt(R[i][j])) ** 2
             count = len(nan_indices)
-            errorEED = math.sqrt(s/(count * n - count * (count + 1)/2))
+            errorEED = math.sqrt(s/(count * dataset.shape[0] - count * (count + 1)/2))
             errorsEED.append(errorEED)
             print("EED FINISHED")
 
@@ -166,7 +166,7 @@ for n, d, rho in dataset_attributes:
         errors_in_one_miss.append(('EED', errorsEED))
 
         ALL_ERRORS.append((f'mis: {mis}', errors_in_one_miss))
-
+        print(ALL_ERRORS)
         np.save(f"./data/AR/results/ALL_ERRORS_n_{n}_d_{d}_rho_{rho}", ALL_ERRORS, allow_pickle=True)
 
     print(np.load(f"./data/AR/results/ALL_ERRORS_n_{n}_d_{d}_rho_{rho}.npy", allow_pickle=True))
