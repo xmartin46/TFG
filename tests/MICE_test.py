@@ -14,7 +14,6 @@ from sklearn.metrics import mean_squared_error
 
 # ************************ VARIABLES *******************************
 missingness_percentage = [0.1, 0.3, 0.5]
-
 ##########################################
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, LogisticRegression, Ridge, RidgeClassifier

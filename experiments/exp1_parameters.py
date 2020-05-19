@@ -24,9 +24,9 @@ from tqdm import tqdm
 iterations = 10
 dataset_name = 'wine.csv'
 missingness_percentages = [0.1] #, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-dataset_attributes = [[100, 30, 0.9], [100, 30, 0.5], [100, 30, 0.1]] #[n, d, rho]
+dataset_attributes = [[100, 30, 0.9]] #, [100, 30, 0.5], [100, 30, 0.1]] #[n, d, rho]
 
-lambds = [0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 5]
+lambds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 neighborss = [5, 10, 15, 20, 25, 30]
 ms = range(1, 8)
 

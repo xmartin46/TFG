@@ -102,7 +102,10 @@ class wNN(impute_methods):
             return (sum/m) ** (1/q)
 
     def __weight(self, dist, sum_distances, kernel_type, lambd):
-        return self.__kernelize((dist/lambd), kernel_type)/sum_distances
+        if sum_distances != 0:
+            return self.__kernelize((dist/lambd), kernel_type)/sum_distances
+        else:
+            return 0
 
     def __kernelize(self, val, kernel='Gaussian'):
         if kernel == 'Gaussian':
@@ -196,7 +199,10 @@ class wNN_correlation(impute_methods):
             return (sum/m) ** (1/q)
 
     def __weight(self, dist, sum_distances, kernel_type, lambd):
-        return self.__kernelize((dist/lambd), kernel_type)/sum_distances
+        if sum_distances != 0:
+            return self.__kernelize((dist/lambd), kernel_type)/sum_distances
+        else:
+            return 0
 
     def __kernelize(self, val, kernel='Gaussian'):
         if kernel == 'Gaussian':

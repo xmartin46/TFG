@@ -1,3 +1,5 @@
+import os
+
 import sys
 sys.path.append('..')
 
@@ -11,6 +13,7 @@ from methods.IZero import IZero
 from methods.ESD import ESD
 from methods.EED import EED
 
+import time
 from tqdm import tqdm
 
 # 50 iteracions
@@ -19,13 +22,16 @@ from tqdm import tqdm
 # Hem de trobar els millors paràmetres de cada mètode per cada dataset
 # Normalitzem dades????
 
-iterations = 1
+iterations = 30
 dataset_name = 'wine.csv'
-missingness_percentages = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+missingness_percentages = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
 dataset_attributes = [[100, 30, 0.9]] #[n, d, rho]
 
 for n, d, rho in dataset_attributes:
     ALL_ERRORS = []
+    os.mkdir(f"./data/AR/dataset_n_{n}_d_{d}_rho_{rho}")
+    os.mkdir(f"./data/AR/dataset_n_{n}_d_{d}_rho_{rho}/results")
+
     for mis in missingness_percentages:
         errorsEM = []
         errorsIMean = []
@@ -37,7 +43,7 @@ for n, d, rho in dataset_attributes:
         errorsEED = []
 
         errors_in_one_miss = []
-
+        start = time.time()
         for it in tqdm(range(iterations)):
             # dataset = parse_file(dataset_name)
             dataset = generate_dataset_AR(n, d, rho)
@@ -46,13 +52,14 @@ for n, d, rho in dataset_attributes:
             dataset, dataset_missing = generate_missingness_MAR(dataset, mis)
 
             # Save files, just in case
-            np.save(f"./data/AR/dataset_n_{n}_d_{d}_rho_{rho}_mis_{mis}__it_{it}", dataset)
-            np.save(f"./data/AR/datasetmissing_n_{n}_d_{d}_rho_{rho}_mis_{mis}_it_{it}", dataset_missing)
+            np.save(f"./data/AR/dataset_n_{n}_d_{d}_rho_{rho}/dataset_mis_{mis}_it_{it}", dataset)
+            np.save(f"./data/AR/dataset_n_{n}_d_{d}_rho_{rho}/datasetmissing_mis_{mis}_it_{it}", dataset_missing)
 
             # EM (BIC selection up to 10 components)
             methodEM = EM()
             bic = BIC(dataset)
             print(bic)
+            bic = 1
             _, _, _, imputedEM = methodEM.impute(copy.deepcopy(dataset_missing), bic, verbose=True)
             total_missing_values = np.count_nonzero(abs(dataset - imputedEM))
             errorEM = math.sqrt(np.sum(abs(dataset - imputedEM) ** 2)/total_missing_values)
@@ -78,38 +85,38 @@ for n, d, rho in dataset_attributes:
             print("IZero FINISHED")
 
 
-            # kNN
-            methodkNN = kNN()
-            neighbors = 10 # Change
-            q = 2
-            imputed_kNN = methodkNN.impute(copy.deepcopy(dataset_missing), neighbors, q)
-            total_missing_values = np.count_nonzero(abs(dataset - imputed_kNN))
-            errorkNN = math.sqrt(np.sum(abs(dataset - imputed_kNN) ** 2)/total_missing_values)
-            errorskNN.append(errorkNN)
-            print("kNN FINISHED")
-
-
-            # wNN
-            methodwNN = wNN()
-            neighbors = 10
-            q = 2
-            kernel_type = 'Gaussian'
-            lambd = 1
-            imputedwNN = methodwNN.impute(copy.deepcopy(dataset_missing), neighbors, q, kernel_type, lambd)
-            total_missing_values = np.count_nonzero(abs(dataset - imputedwNN))
-            errorwNN = math.sqrt(np.sum(abs(dataset - imputedwNN) ** 2)/total_missing_values)
-            errorswNN.append(errorwNN)
-            print("wNN FINISHED")
+            # # kNN
+            # methodkNN = kNN()
+            # neighbors = 15
+            # q = 2
+            # imputed_kNN = methodkNN.impute(copy.deepcopy(dataset_missing), neighbors, q)
+            # total_missing_values = np.count_nonzero(abs(dataset - imputed_kNN))
+            # errorkNN = math.sqrt(np.sum(abs(dataset - imputed_kNN) ** 2)/total_missing_values)
+            # errorskNN.append(errorkNN)
+            # print("kNN FINISHED")
+            #
+            #
+            # # wNN
+            # methodwNN = wNN()
+            # neighbors = 15
+            # q = 2
+            # kernel_type = 'Gaussian'
+            # lambd = 0.1
+            # imputedwNN = methodwNN.impute(copy.deepcopy(dataset_missing), neighbors, q, kernel_type, lambd)
+            # total_missing_values = np.count_nonzero(abs(dataset - imputedwNN))
+            # errorwNN = math.sqrt(np.sum(abs(dataset - imputedwNN) ** 2)/total_missing_values)
+            # errorswNN.append(errorwNN)
+            # print("wNN FINISHED")
 
 
             # wNN_correlation (Els que els hi falti valors des del principi, avisar que primer fem un knn imputant la mitjana dels neighbors)
             methodwNN_correlation = wNN_correlation()
-            neighbors = 10
+            neighbors = 15
             q = 2
             kernel_type = 'Gaussian'
-            lambd = 1
-            # Canviar m i c de cov function de la classe?
-            imputedwNN_correlation = methodwNN_correlation.impute(dataset, copy.deepcopy(dataset_missing), neighbors, q, kernel_type, lambd)
+            lambd = 0.1
+            m = 6
+            imputedwNN_correlation = methodwNN_correlation.impute(dataset, copy.deepcopy(dataset_missing), neighbors, q, kernel_type, lambd, m)
             total_missing_values = np.count_nonzero(abs(dataset - imputedwNN_correlation))
             errorwNN_correlation = math.sqrt(np.sum(abs(dataset - imputedwNN_correlation) ** 2)/total_missing_values)
             errorswNN_correlation.append(errorwNN_correlation)
@@ -154,7 +161,7 @@ for n, d, rho in dataset_attributes:
             print("EED FINISHED")
 
 
-
+        print(time.time() - start)
 
         errors_in_one_miss.append(('EM', errorsEM))
         errors_in_one_miss.append(('IZero', errorsIZero))
@@ -167,6 +174,6 @@ for n, d, rho in dataset_attributes:
 
         ALL_ERRORS.append((f'mis: {mis}', errors_in_one_miss))
         print(ALL_ERRORS)
-        np.save(f"./data/AR/results/ALL_ERRORS_n_{n}_d_{d}_rho_{rho}", ALL_ERRORS, allow_pickle=True)
+        np.save(f"./data/AR/dataset_n_{n}_d_{d}_rho_{rho}/results/ALL_ERRORS_n_{n}_d_{d}_rho_{rho}", ALL_ERRORS, allow_pickle=True)
 
-    print(np.load(f"./data/AR/results/ALL_ERRORS_n_{n}_d_{d}_rho_{rho}.npy", allow_pickle=True))
+    print(np.load(f"./data/AR/dataset_n_{n}_d_{d}_rho_{rho}/results/ALL_ERRORS_n_{n}_d_{d}_rho_{rho}.npy", allow_pickle=True))
